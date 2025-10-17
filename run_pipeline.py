@@ -1,11 +1,10 @@
 # run_pipeline.py
 
 import os
-from pathlib import Path
 from azure.ai.ml import MLClient, command, Input, Output
 from azure.ai.ml.entities import AmlCompute, Data, Environment
 from azure.ai.ml.constants import AssetTypes
-from azure.ai.ml.sweep import Choice
+from azure.ai.ml.sweep import Choice, SweepJobScheduler
 from azure.ai.ml.dsl import pipeline
 from azure.identity import DefaultAzureCredential
 
@@ -19,9 +18,6 @@ ml_client = MLClient(
     workspace_name=os.environ["WORKSPACE_NAME"],
 )
 print(f"Connected to {ml_client.workspace_name}")
-
-# Get the absolute path to the src directory
-src_path = str(Path(__file__).parent / "src")
 
 # --- 2. Setup Required Assets (Compute, Data, Environment) ---
 
@@ -92,7 +88,7 @@ data_prep_component = command(
         "train_data": Output(type="uri_folder"),
         "test_data": Output(type="uri_folder"),
     },
-    code=src_path,
+    code="src",
     command="python prep.py --data ${{inputs.data}} --test_train_ratio ${{inputs.test_train_ratio}} --train_data ${{outputs.train_data}} --test_data ${{outputs.test_data}}",
     environment=f"{env_name}@latest",
 )
@@ -109,7 +105,7 @@ train_component = command(
         "max_depth": Input(type="number", default=5),
     },
     outputs={"model_output": Output(type="mlflow_model")},
-    code=src_path,
+    code="src",
     command="python train.py --train_data ${{inputs.train_data}} --test_data ${{inputs.test_data}} --n_estimators ${{inputs.n_estimators}} --max_depth ${{inputs.max_depth}} --model_output ${{outputs.model_output}}",
     environment=f"{env_name}@latest",
 )
@@ -121,7 +117,7 @@ model_register_component = command(
     description="Registers the best model from the sweep job.",
     inputs={"model": Input(type="mlflow_model")},
     outputs={"registered_model": Output(type="mlflow_model")},
-    code=src_path,
+    code="src",
     command="python register.py --model_name best_model --model_path ${{inputs.model}} --model_info_output_path ${{outputs.registered_model}}",
     environment=f"{env_name}@latest",
 )
@@ -140,26 +136,18 @@ def car_price_pipeline(input_data_uri, test_train_ratio):
         test_train_ratio=test_train_ratio,
     )
 
-    # Step 2: Train and Tune Model using a Sweep Job
+    # Step 2: Train and Tune Model - Simple version without sweep
+    # (Sweep can be added later via Azure ML Studio or separate job definition)
     train_step = train_component(
         train_data=preprocess_step.outputs.train_data,
         test_data=preprocess_step.outputs.test_data,
-        n_estimators=Choice(values=[10, 20, 50, 100]),
-        max_depth=Choice(values=[5, 10, 15, 20]),
+        n_estimators=100,
+        max_depth=10,
     )
-    
-    # Apply sweep to the training step
-    sweep_job = train_step.sweep(
-        compute=cpu_compute_target,
-        sampling_algorithm="random",
-        primary_metric="MSE",
-        goal="Minimize",
-    )
-    sweep_job.set_limits(max_total_trials=10, max_concurrent_trials=2, timeout=7200)
 
-    # Step 3: Register the best model from the sweep
+    # Step 3: Register the model
     model_register_step = model_register_component(
-        model=sweep_job.outputs.model_output,
+        model=train_step.outputs.model_output,
     )
     
     return {
