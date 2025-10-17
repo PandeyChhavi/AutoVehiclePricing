@@ -11,7 +11,7 @@ outputs:
   registered_model:
     type: mlflow_model
     description: Registered model
-code: src
+code: ../../../src
 command: >-
   python register.py
   --model_name best_model

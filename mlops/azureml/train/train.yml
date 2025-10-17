@@ -22,7 +22,7 @@ outputs:
   model_output:
     type: mlflow_model
     description: Trained MLflow model
-code: src
+code: ../../../src
 command: >-
   python train.py
   --train_data ${{inputs.train_data}}

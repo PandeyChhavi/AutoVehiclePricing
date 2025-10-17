@@ -18,7 +18,7 @@ outputs:
   test_data:
     type: uri_folder
     description: Test data output
-code: src
+code: ../../../src
 command: >-
   python prep.py
   --data ${{inputs.data}}
