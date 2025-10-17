@@ -116,8 +116,9 @@ model_register_component = command(
     display_name="Register Best Model",
     description="Registers the best model from the sweep job.",
     inputs={"model": Input(type="mlflow_model")},
+    outputs={"registered_model": Output(type="mlflow_model")},
     code="./src",
-    command="python register.py --model ${{inputs.model}}",
+    command="python register.py --model_name best_model --model_path ${{inputs.model}} --model_info_output_path ${{outputs.registered_model}}",
     environment=f"{env_name}@latest",
 )
 
@@ -158,7 +159,7 @@ def car_price_pipeline(input_data_uri, test_train_ratio):
     )
     
     return {
-        "best_model": model_register_step.outputs.model_output,
+        "best_model": model_register_step.outputs.registered_model,
     }
 
 # --- 5. Submit the Pipeline Job ---
