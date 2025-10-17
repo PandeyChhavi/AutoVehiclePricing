@@ -67,7 +67,7 @@ except Exception:
         name=env_name,
         description="Environment for the Used Car Price Prediction pipeline",
         image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04",
-        conda_file="env/conda.yml", # Assumes conda.yml is in an 'env' folder
+        conda_file="data-science/environment/train-conda.yml",
     )
     ml_client.environments.create_or_update(pipeline_env)
     print("Environment created.")
@@ -88,8 +88,8 @@ data_prep_component = command(
         "train_data": Output(type="uri_folder"),
         "test_data": Output(type="uri_folder"),
     },
-    code="./data_prep",
-    command="python data_prep.py --data ${{inputs.data}} --test_train_ratio ${{inputs.test_train_ratio}} --train_data ${{outputs.train_data}} --test_data ${{outputs.test_data}}",
+    code="./src",
+    command="python prep.py --data ${{inputs.data}} --test_train_ratio ${{inputs.test_train_ratio}} --train_data ${{outputs.train_data}} --test_data ${{outputs.test_data}}",
     environment=f"{env_name}@latest",
 )
 
@@ -104,9 +104,9 @@ train_component = command(
         "n_estimators": Input(type="number", default=100),
         "max_depth": Input(type="number", default=5),
     },
-    outputs={ "model_output": Output(type="mlflow_model") },
-    code="./model_train",
-    command="python model_train.py --train_data ${{inputs.train_data}} --test_data ${{inputs.test_data}} --n_estimators ${{inputs.n_estimators}} --max_depth ${{inputs.max_depth}} --model_output ${{outputs.model_output}}",
+    outputs={"model_output": Output(type="mlflow_model")},
+    code="./src",
+    command="python train.py --train_data ${{inputs.train_data}} --test_data ${{inputs.test_data}} --n_estimators ${{inputs.n_estimators}} --max_depth ${{inputs.max_depth}} --model_output ${{outputs.model_output}}",
     environment=f"{env_name}@latest",
 )
 
@@ -115,9 +115,9 @@ model_register_component = command(
     name="register_model",
     display_name="Register Best Model",
     description="Registers the best model from the sweep job.",
-    inputs={ "model": Input(type="mlflow_model") },
-    code="./model_register",
-    command="python model_register.py --model ${{inputs.model}}",
+    inputs={"model": Input(type="mlflow_model")},
+    code="./src",
+    command="python register.py --model ${{inputs.model}}",
     environment=f"{env_name}@latest",
 )
 
@@ -136,13 +136,15 @@ def car_price_pipeline(input_data_uri, test_train_ratio):
     )
 
     # Step 2: Train and Tune Model using a Sweep Job
-    sweep_on_train_step = train_component(
+    train_step = train_component(
         train_data=preprocess_step.outputs.train_data,
         test_data=preprocess_step.outputs.test_data,
         n_estimators=Choice(values=[10, 20, 50, 100]),
         max_depth=Choice(values=[5, 10, 15, 20]),
     )
-    sweep_job = sweep_on_train_step.sweep(
+    
+    # Apply sweep to the training step
+    sweep_job = train_step.sweep(
         compute=cpu_compute_target,
         sampling_algorithm="random",
         primary_metric="MSE",
@@ -154,6 +156,10 @@ def car_price_pipeline(input_data_uri, test_train_ratio):
     model_register_step = model_register_component(
         model=sweep_job.outputs.model_output,
     )
+    
+    return {
+        "best_model": model_register_step.outputs.model_output,
+    }
 
 # --- 5. Submit the Pipeline Job ---
 
