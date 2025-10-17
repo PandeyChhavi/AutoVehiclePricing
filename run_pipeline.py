@@ -4,7 +4,7 @@ import os
 from azure.ai.ml import MLClient, command, Input, Output
 from azure.ai.ml.entities import AmlCompute, Data, Environment
 from azure.ai.ml.constants import AssetTypes
-from azure.ai.ml.sweep import Choice, SweepJobScheduler
+from azure.ai.ml.sweep import Choice
 from azure.ai.ml.dsl import pipeline
 from azure.identity import DefaultAzureCredential
 
