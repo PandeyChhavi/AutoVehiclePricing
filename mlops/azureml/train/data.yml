@@ -1,6 +1,28 @@
-$schema: https://azuremlschemas.azureedge.net/latest/data.schema.json
-
-type: uri_file
-name: used-cars-data # Provide the name for the dataset, related to used cars
-description: A dataset of used cars for price prediction  # Provide the description for the dataset, related to used cars
-path: ../../../data/used_cars.csv
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+name: data_preparation
+display_name: Data Preparation and Splitting
+description: Splits the raw data into training and test sets
+type: command
+inputs:
+  data:
+    type: uri_file
+    description: Input data file
+  test_train_ratio:
+    type: number
+    description: Train-test split ratio
+    default: 0.2
+outputs:
+  train_data:
+    type: uri_folder
+    description: Training data output
+  test_data:
+    type: uri_folder
+    description: Test data output
+code: src
+command: >-
+  python prep.py
+  --data ${{inputs.data}}
+  --test_train_ratio ${{inputs.test_train_ratio}}
+  --train_data ${{outputs.train_data}}
+  --test_data ${{outputs.test_data}}
+environment: azureml:machine_learning_E2E_v2@latest

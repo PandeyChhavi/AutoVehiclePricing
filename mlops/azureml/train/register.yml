@@ -1,0 +1,20 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+name: register_model
+display_name: Register Best Model
+description: Registers the best model from the training job
+type: command
+inputs:
+  model:
+    type: mlflow_model
+    description: Trained model to register
+outputs:
+  registered_model:
+    type: mlflow_model
+    description: Registered model
+code: src
+command: >-
+  python register.py
+  --model_name best_model
+  --model_path ${{inputs.model}}
+  --model_info_output_path ${{outputs.registered_model}}
+environment: azureml:machine_learning_E2E_v2@latest
