@@ -1,10 +1,9 @@
 # run_pipeline.py
 
 import os
-from azure.ai.ml import MLClient, command, Input, Output
+from azure.ai.ml import MLClient, load_component, Input, Output
 from azure.ai.ml.entities import AmlCompute, Data, Environment
 from azure.ai.ml.constants import AssetTypes
-from azure.ai.ml.sweep import Choice
 from azure.ai.ml.dsl import pipeline
 from azure.identity import DefaultAzureCredential
 
@@ -73,54 +72,11 @@ except Exception:
     print("Environment created.")
 
 
-# --- 3. Define Pipeline Components ---
-
-# Data Preparation Component
-data_prep_component = command(
-    name="data_preparation",
-    display_name="Data Preparation and Splitting",
-    description="Splits the raw data into training and test sets",
-    inputs={
-        "data": Input(type="uri_file"),
-        "test_train_ratio": Input(type="number"),
-    },
-    outputs={
-        "train_data": Output(type="uri_folder"),
-        "test_data": Output(type="uri_folder"),
-    },
-    code="git+https://github.com/PandeyChhavi/AutoVehiclePricing@main:src",
-    command="python prep.py --data ${{inputs.data}} --test_train_ratio ${{inputs.test_train_ratio}} --train_data ${{outputs.train_data}} --test_data ${{outputs.test_data}}",
-    environment=f"{env_name}@latest",
-)
-
-# Model Training Component
-train_component = command(
-    name="train_price_prediction_model",
-    display_name="Train Car Price Prediction Model",
-    description="Trains a Random Forest Regressor model.",
-    inputs={
-        "train_data": Input(type="uri_folder"),
-        "test_data": Input(type="uri_folder"),
-        "n_estimators": Input(type="number", default=100),
-        "max_depth": Input(type="number", default=5),
-    },
-    outputs={"model_output": Output(type="mlflow_model")},
-    code="git+https://github.com/PandeyChhaviNPG/AutoVehiclePricing@main:src",
-    command="python train.py --train_data ${{inputs.train_data}} --test_data ${{inputs.test_data}} --n_estimators ${{inputs.n_estimators}} --max_depth ${{inputs.max_depth}} --model_output ${{outputs.model_output}}",
-    environment=f"{env_name}@latest",
-)
-
-# Model Registration Component
-model_register_component = command(
-    name="register_model",
-    display_name="Register Best Model",
-    description="Registers the best model from the sweep job.",
-    inputs={"model": Input(type="mlflow_model")},
-    outputs={"registered_model": Output(type="mlflow_model")},
-    code="git+https://github.com/PandeyChhaviNPG/AutoVehiclePricing@main:src",
-    command="python register.py --model_name best_model --model_path ${{inputs.model}} --model_info_output_path ${{outputs.registered_model}}",
-    environment=f"{env_name}@latest",
-)
+# --- 3. Load Pipeline Components from YAML ---
+print("Loading components...")
+data_prep_component = load_component(source="mlops/azureml/train/data.yml")
+train_component = load_component(source="mlops/azureml/train/train.yml")
+model_register_component = load_component(source="mlops/azureml/train/newpipeline.yml")
 
 
 # --- 4. Define and Assemble the Full Pipeline ---
@@ -136,13 +92,10 @@ def car_price_pipeline(input_data_uri, test_train_ratio):
         test_train_ratio=test_train_ratio,
     )
 
-    # Step 2: Train and Tune Model - Simple version without sweep
-    # (Sweep can be added later via Azure ML Studio or separate job definition)
+    # Step 2: Train Model
     train_step = train_component(
         train_data=preprocess_step.outputs.train_data,
         test_data=preprocess_step.outputs.test_data,
-        n_estimators=100,
-        max_depth=10,
     )
 
     # Step 3: Register the model
