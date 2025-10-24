@@ -1,6 +1,7 @@
 # run_pipeline.py
 
 import os
+import sys
 from azure.ai.ml import MLClient, load_component, Input, Output
 from azure.ai.ml.entities import AmlCompute, Data, Environment
 from azure.ai.ml.constants import AssetTypes
@@ -9,6 +10,24 @@ from azure.identity import DefaultAzureCredential
 
 # --- 1. Connect to Azure ML Workspace ---
 print("Connecting to Azure ML Workspace...")
+
+# Check if required environment variables are set
+required_env_vars = ["SUBSCRIPTION_ID", "RESOURCE_GROUP", "WORKSPACE_NAME", "EXPERIMENT_NAME"]
+missing_vars = [var for var in required_env_vars if not os.environ.get(var)]
+
+if missing_vars:
+    print(f"❌ Missing required environment variables: {', '.join(missing_vars)}")
+    print("Please set the following environment variables:")
+    for var in missing_vars:
+        print(f"  - {var}")
+    print("\nFor GitHub Actions, add these as repository secrets:")
+    print("  - SUBSCRIPTION_ID")
+    print("  - RESOURCE_GROUP") 
+    print("  - WORKSPACE_NAME")
+    print("  - EXPERIMENT_NAME")
+    print("  - AZURE_CREDENTIALS")
+    sys.exit(1)
+
 credential = DefaultAzureCredential()
 ml_client = MLClient(
     credential=credential,
