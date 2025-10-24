@@ -11,10 +11,10 @@ outputs:
   registered_model:
     type: mlflow_model
     description: Registered model
-code: ../../../src
+code: ../../../data-science/src
 command: >-
   python register.py
-  --model_name best_model
+  --model_name used_cars_price_prediction_model
   --model_path ${{inputs.model}}
   --model_info_output_path ${{outputs.registered_model}}
 environment: azureml:machine_learning_E2E_v2@latest

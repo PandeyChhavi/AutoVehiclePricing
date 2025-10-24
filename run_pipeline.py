@@ -76,7 +76,7 @@ except Exception:
 print("Loading components...")
 data_prep_component = load_component(source="mlops/azureml/train/data.yml")
 train_component = load_component(source="mlops/azureml/train/train.yml")
-model_register_component = load_component(source="mlops/azureml/train/newpipeline.yml")
+model_register_component = load_component(source="mlops/azureml/train/register.yml")
 
 
 # --- 4. Define and Assemble the Full Pipeline ---
