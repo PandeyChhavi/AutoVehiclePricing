@@ -1,5 +1,4 @@
 [flake8]
-# Exclude directories and files
 exclude = 
     .git,
     __pycache__,
@@ -16,23 +15,14 @@ exclude =
     .mypy_cache,
     .DS_Store
 
-# Maximum line length
 max-line-length = 127
-
-# Maximum complexity
 max-complexity = 10
 
-# Ignore specific error codes
 ignore = 
-    E203,  # whitespace before ':'
-    W503,  # line break before binary operator
-    F401,  # imported but unused (for __init__.py files)
+    E203,
+    W503,
+    F401
 
-# Select specific error codes for strict checking
 select = E9,F63,F7,F82
-
-# Show source
 show-source = True
-
-# Show statistics
 statistics = True
