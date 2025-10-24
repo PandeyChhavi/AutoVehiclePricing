@@ -30,4 +30,4 @@ command: >-
   --n_estimators ${{inputs.n_estimators}}
   --max_depth ${{inputs.max_depth}}
   --model_output ${{outputs.model_output}}
-environment: azureml:machine_learning_E2E_v2@latest
+environment: azureml:used_cars_train_env_v2@latest

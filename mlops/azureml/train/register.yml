@@ -17,4 +17,4 @@ command: >-
   --model_name used_cars_price_prediction_model
   --model_path ${{inputs.model}}
   --model_info_output_path ${{outputs.registered_model}}
-environment: azureml:machine_learning_E2E_v2@latest
+environment: azureml:used_cars_train_env_v2@latest

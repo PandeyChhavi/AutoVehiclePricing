@@ -25,4 +25,4 @@ command: >-
   --test_train_ratio ${{inputs.test_train_ratio}}
   --train_data ${{outputs.train_data}}
   --test_data ${{outputs.test_data}}
-environment: azureml:machine_learning_E2E_v2@latest
+environment: azureml:used_cars_train_env_v2@latest

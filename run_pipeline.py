@@ -75,7 +75,7 @@ except Exception:
     print("Data asset created.")
     
 # Create Environment if it doesn't exist
-env_name = "machine_learning_E2E_v2"
+env_name = "used_cars_train_env_v2"
 try:
     pipeline_env = ml_client.environments.get(name=env_name, label="latest")
     print(f"Found existing environment '{env_name}', reusing.")
