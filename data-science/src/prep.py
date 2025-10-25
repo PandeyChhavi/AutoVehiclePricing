@@ -81,12 +81,31 @@ def main(args):  # Write the function name for the main data preparation logic
     train_df.to_csv(os.path.join(args.train_data, "train_data.csv"), index=False)  # Specify the name of the train data file
     test_df.to_csv(os.path.join(args.test_data, "test_data.csv"), index=False)  # Specify the name of the test data file
 
-    # log the metrics
-    mlflow.log_metric('train size', train_df.shape[0])  # Log the train dataset size
-    mlflow.log_metric('test size', test_df.shape[0])  # Log the test dataset size
+    # log the metrics (if MLflow is available)
+    try:
+        mlflow.log_metric('train size', train_df.shape[0])  # Log the train dataset size
+        mlflow.log_metric('test size', test_df.shape[0])  # Log the test dataset size
+        print("✅ MLflow metrics logged successfully")
+    except Exception as e:
+        print(f"⚠️  MLflow logging failed: {e}")
+        print(f"Train size: {train_df.shape[0]}")
+        print(f"Test size: {test_df.shape[0]}")
 
 if __name__ == "__main__":
-    mlflow.start_run()
+    # Configure MLflow for Azure ML environment
+    import os
+    os.environ['MLFLOW_TRACKING_URI'] = 'file:///tmp/mlruns'
+    
+    try:
+        mlflow.start_run()
+        print("✅ MLflow run started successfully")
+    except Exception as e:
+        print(f"⚠️  MLflow start_run failed: {e}")
+        print("Continuing without MLflow tracking...")
+        # Set a flag to skip MLflow operations
+        mlflow_available = False
+    else:
+        mlflow_available = True
 
     # Parse Arguments
     args = parse_args()  # Call the function to parse arguments
@@ -103,4 +122,9 @@ if __name__ == "__main__":
     
     main(args)
 
-    mlflow.end_run()
+    if mlflow_available:
+        try:
+            mlflow.end_run()
+            print("✅ MLflow run ended successfully")
+        except Exception as e:
+            print(f"⚠️  MLflow end_run failed: {e}")

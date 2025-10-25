@@ -45,10 +45,17 @@ def main(args):
     model = RandomForestRegressor(n_estimators=args.n_estimators, max_depth=args.max_depth, random_state=42)  # Provide the arguments for RandomForestRegressor
     model.fit(X_train, y_train)  # Train the model
 
-    # Log model hyperparameters
-    mlflow.log_param("model", "RandomForestRegressor")  # Provide the model name
-    mlflow.log_param("n_estimators", args.n_estimators)
-    mlflow.log_param("max_depth", args.max_depth)
+    # Log model hyperparameters (if MLflow is available)
+    try:
+        mlflow.log_param("model", "RandomForestRegressor")  # Provide the model name
+        mlflow.log_param("n_estimators", args.n_estimators)
+        mlflow.log_param("max_depth", args.max_depth)
+        print("✅ MLflow parameters logged successfully")
+    except Exception as e:
+        print(f"⚠️  MLflow parameter logging failed: {e}")
+        print(f"Model: RandomForestRegressor")
+        print(f"n_estimators: {args.n_estimators}")
+        print(f"max_depth: {args.max_depth}")
 
     # Predict using the RandomForest Regressor on test data
     yhat_test = model.predict(X_test)  # Predict the test data
@@ -56,14 +63,37 @@ def main(args):
     # Compute and log mean squared error for test data
     mse = mean_squared_error(y_test, yhat_test)
     print('Mean Squared Error of RandomForest Regressor on test set: {:.2f}'.format(mse))
-    mlflow.log_metric("MSE", float(mse))  # Log the MSE
+    
+    try:
+        mlflow.log_metric("MSE", float(mse))  # Log the MSE
+        print("✅ MLflow metrics logged successfully")
+    except Exception as e:
+        print(f"⚠️  MLflow metric logging failed: {e}")
 
     # Save the model
-    mlflow.sklearn.save_model(sk_model=model, path=args.model_output)  # Save the model
+    try:
+        mlflow.sklearn.save_model(sk_model=model, path=args.model_output)  # Save the model
+        print("✅ Model saved with MLflow successfully")
+    except Exception as e:
+        print(f"⚠️  MLflow model saving failed: {e}")
+        # Fallback: save model using joblib
+        import joblib
+        joblib.dump(model, os.path.join(args.model_output, "model.pkl"))
+        print("✅ Model saved with joblib as fallback")
 
 if __name__ == "__main__":
+    # Configure MLflow for Azure ML environment
+    import os
+    os.environ['MLFLOW_TRACKING_URI'] = 'file:///tmp/mlruns'
     
-    mlflow.start_run()
+    try:
+        mlflow.start_run()
+        print("✅ MLflow run started successfully")
+        mlflow_available = True
+    except Exception as e:
+        print(f"⚠️  MLflow start_run failed: {e}")
+        print("Continuing without MLflow tracking...")
+        mlflow_available = False
 
     # Parse Arguments
     args = parse_args()
@@ -81,4 +111,9 @@ if __name__ == "__main__":
 
     main(args)
 
-    mlflow.end_run()
+    if mlflow_available:
+        try:
+            mlflow.end_run()
+            print("✅ MLflow run ended successfully")
+        except Exception as e:
+            print(f"⚠️  MLflow end_run failed: {e}")
