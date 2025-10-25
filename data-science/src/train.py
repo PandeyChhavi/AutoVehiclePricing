@@ -23,9 +23,9 @@ def parse_args():
     parser.add_argument("--train_data", type=str, help="Path to train dataset")  # Specify the type for train_data
     parser.add_argument("--test_data", type=str, help="Path to test dataset")  # Specify the type for test_data
     parser.add_argument("--model_output", type=str, help="Path of output model")  # Specify the type for model_output
-    parser.add_argument('--n_estimators', type=int, default=100,
+    parser.add_argument('--n_estimators', type=float, default=100,
                         help='The number of trees in the forest')  # Specify the type and default value for n_estimators
-    parser.add_argument('--max_depth', type=int, default=None,
+    parser.add_argument('--max_depth', type=float, default=None,
                         help='The maximum depth of the tree')  # Specify the type and default value for max_depth
 
     args = parser.parse_args()
@@ -46,20 +46,24 @@ def main(args):
     X_test = test_df.drop(columns=['price'])
 
     # Initialize and train a RandomForest Regressor
-    model = RandomForestRegressor(n_estimators=args.n_estimators, max_depth=args.max_depth, random_state=42)  # Provide the arguments for RandomForestRegressor
+    # Convert float values to int for RandomForestRegressor
+    n_estimators = int(args.n_estimators) if args.n_estimators is not None else 100
+    max_depth = int(args.max_depth) if args.max_depth is not None else None
+    
+    model = RandomForestRegressor(n_estimators=n_estimators, max_depth=max_depth, random_state=42)  # Provide the arguments for RandomForestRegressor
     model.fit(X_train, y_train)  # Train the model
 
     # Log model hyperparameters (if MLflow is available)
     try:
         mlflow.log_param("model", "RandomForestRegressor")  # Provide the model name
-        mlflow.log_param("n_estimators", args.n_estimators)
-        mlflow.log_param("max_depth", args.max_depth)
+        mlflow.log_param("n_estimators", n_estimators)
+        mlflow.log_param("max_depth", max_depth)
         print("✅ MLflow parameters logged successfully")
     except Exception as e:
         print(f"⚠️  MLflow parameter logging failed: {e}")
         print(f"Model: RandomForestRegressor")
-        print(f"n_estimators: {args.n_estimators}")
-        print(f"max_depth: {args.max_depth}")
+        print(f"n_estimators: {n_estimators}")
+        print(f"max_depth: {max_depth}")
 
     # Predict using the RandomForest Regressor on test data
     yhat_test = model.predict(X_test)  # Predict the test data
@@ -98,12 +102,16 @@ if __name__ == "__main__":
     # Parse Arguments
     args = parse_args()
 
+    # Convert float values to int for display
+    n_estimators = int(args.n_estimators) if args.n_estimators is not None else 100
+    max_depth = int(args.max_depth) if args.max_depth is not None else None
+    
     lines = [
         f"Train dataset input path: {args.train_data}",
         f"Test dataset input path: {args.test_data}",
         f"Model output path: {args.model_output}",
-        f"Number of Estimators: {args.n_estimators}",
-        f"Max Depth: {args.max_depth}"
+        f"Number of Estimators: {n_estimators}",
+        f"Max Depth: {max_depth}"
     ]
 
     for line in lines:
