@@ -10,6 +10,9 @@ import os
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
+
+# Set MLflow tracking URI before importing mlflow
+os.environ['MLFLOW_TRACKING_URI'] = 'file:///tmp/mlruns'
 import mlflow
 
 def parse_args():
@@ -92,20 +95,15 @@ def main(args):  # Write the function name for the main data preparation logic
         print(f"Test size: {test_df.shape[0]}")
 
 if __name__ == "__main__":
-    # Configure MLflow for Azure ML environment
-    import os
-    os.environ['MLFLOW_TRACKING_URI'] = 'file:///tmp/mlruns'
-    
     try:
         mlflow.start_run()
         print("✅ MLflow run started successfully")
+        mlflow_available = True
     except Exception as e:
         print(f"⚠️  MLflow start_run failed: {e}")
         print("Continuing without MLflow tracking...")
         # Set a flag to skip MLflow operations
         mlflow_available = False
-    else:
-        mlflow_available = True
 
     # Parse Arguments
     args = parse_args()  # Call the function to parse arguments

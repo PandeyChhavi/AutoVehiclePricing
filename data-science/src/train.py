@@ -9,6 +9,10 @@ from pathlib import Path
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
+
+# Set MLflow tracking URI before importing mlflow
+import os
+os.environ['MLFLOW_TRACKING_URI'] = 'file:///tmp/mlruns'
 import mlflow
 import mlflow.sklearn
 
@@ -82,10 +86,6 @@ def main(args):
         print("✅ Model saved with joblib as fallback")
 
 if __name__ == "__main__":
-    # Configure MLflow for Azure ML environment
-    import os
-    os.environ['MLFLOW_TRACKING_URI'] = 'file:///tmp/mlruns'
-    
     try:
         mlflow.start_run()
         print("✅ MLflow run started successfully")

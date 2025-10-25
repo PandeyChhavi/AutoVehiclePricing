@@ -6,9 +6,12 @@ Registers the best-trained ML model from the sweep job.
 
 import argparse
 from pathlib import Path
-import mlflow
 import os 
 import json
+
+# Set MLflow tracking URI before importing mlflow
+os.environ['MLFLOW_TRACKING_URI'] = 'file:///tmp/mlruns'
+import mlflow
 
 def parse_args():
     '''Parse input arguments'''
@@ -64,10 +67,6 @@ def main(args):
     print(f"✅ Model info written to: {output_path}")
 
 if __name__ == "__main__":
-    # Configure MLflow for Azure ML environment
-    import os
-    os.environ['MLFLOW_TRACKING_URI'] = 'file:///tmp/mlruns'
-    
     try:
         mlflow.start_run()
         print("✅ MLflow run started successfully")
