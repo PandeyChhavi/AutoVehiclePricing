@@ -27,8 +27,25 @@ def parse_args():
 def main(args):  # Write the function name for the main data preparation logic
     '''Read, preprocess, split, and save datasets'''
 
+    # Debug: Print arguments
+    print(f"Raw data path: {args.raw_data}")
+    print(f"Train data path: {args.train_data}")
+    print(f"Test data path: {args.test_data}")
+    print(f"Test-train ratio: {args.test_train_ratio}")
+    
+    # Check if raw data file exists
+    import os
+    if not os.path.exists(args.raw_data):
+        print(f"❌ Error: Raw data file does not exist at {args.raw_data}")
+        print(f"Current working directory: {os.getcwd()}")
+        print(f"Files in current directory: {os.listdir('.')}")
+        raise FileNotFoundError(f"Raw data file not found: {args.raw_data}")
+
     # Reading Data
+    print("Reading data...")
     df = pd.read_csv(args.raw_data)
+    print(f"Data loaded successfully. Shape: {df.shape}")
+    print(f"Columns: {list(df.columns)}")
 
     # Encode categorical feature
     le = LabelEncoder()

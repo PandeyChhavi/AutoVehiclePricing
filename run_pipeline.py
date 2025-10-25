@@ -65,8 +65,12 @@ try:
     print(f"Found existing data asset '{data_asset_name}', reusing.")
 except Exception:
     print(f"Creating a new data asset '{data_asset_name}'...")
+    # Use absolute path to ensure Azure ML can find the file
+    data_path = os.path.abspath('data/used_cars.csv')
+    print(f"Data file path: {data_path}")
+    
     data_asset = Data(
-        path='data/used_cars.csv',
+        path=data_path,
         type=AssetTypes.URI_FILE,
         description="A dataset of used cars for price prediction",
         name=data_asset_name
@@ -131,6 +135,9 @@ def car_price_pipeline(input_data_uri, test_train_ratio):
 print("Instantiating pipeline...")
 # Get the latest version of the data asset
 latest_data_asset = ml_client.data.get(name=data_asset_name, label="latest")
+print(f"Data asset path: {latest_data_asset.path}")
+print(f"Data asset type: {latest_data_asset.type}")
+
 pipeline_instance = car_price_pipeline(
     input_data_uri=Input(type="uri_file", path=latest_data_asset.path),
     test_train_ratio=0.2,
