@@ -150,5 +150,23 @@ pipeline_job = ml_client.jobs.create_or_update(
 )
 
 print(f"Pipeline job '{pipeline_job.name}' submitted. View in Azure ML Studio.")
-# Stream the job output
-ml_client.jobs.stream(pipeline_job.name)
+print(f"RunId: {pipeline_job.name}")
+print(f"Web View: https://ml.azure.com/runs/{pipeline_job.name}?wsid=/subscriptions/{os.environ['SUBSCRIPTION_ID']}/resourcegroups/{os.environ['RESOURCE_GROUP']}/workspaces/{os.environ['WORKSPACE_NAME']}")
+
+# Wait for job completion and get status
+print("\nWaiting for pipeline completion...")
+try:
+    # Wait for the job to complete (with timeout)
+    ml_client.jobs.stream(pipeline_job.name)
+except Exception as e:
+    print(f"Pipeline execution completed with status: {pipeline_job.status}")
+    print(f"Error details: {e}")
+    
+    # Try to get more detailed error information
+    try:
+        job_details = ml_client.jobs.get(pipeline_job.name)
+        print(f"Job status: {job_details.status}")
+        if hasattr(job_details, 'services') and job_details.services:
+            print("Job services:", job_details.services)
+    except Exception as detail_error:
+        print(f"Could not get job details: {detail_error}")

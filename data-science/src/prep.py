@@ -35,15 +35,36 @@ def main(args):  # Write the function name for the main data preparation logic
     
     # Check if raw data file exists
     import os
-    if not os.path.exists(args.raw_data):
-        print(f"❌ Error: Raw data file does not exist at {args.raw_data}")
-        print(f"Current working directory: {os.getcwd()}")
-        print(f"Files in current directory: {os.listdir('.')}")
-        raise FileNotFoundError(f"Raw data file not found: {args.raw_data}")
+    print(f"Current working directory: {os.getcwd()}")
+    print(f"Files in current directory: {os.listdir('.')}")
+    
+    # In Azure ML, the data might be mounted differently
+    # Check if the path exists as-is first
+    if os.path.exists(args.raw_data):
+        data_file_path = args.raw_data
+        print(f"✅ Found data file at: {data_file_path}")
+    else:
+        # Try to find the data file in common Azure ML mount locations
+        print(f"❌ Data file not found at {args.raw_data}")
+        print("Searching for data file in common locations...")
+        
+        # List all files recursively to find the CSV
+        for root, dirs, files in os.walk('.'):
+            for file in files:
+                if file.endswith('.csv') and 'used_cars' in file.lower():
+                    data_file_path = os.path.join(root, file)
+                    print(f"✅ Found data file at: {data_file_path}")
+                    break
+            else:
+                continue
+            break
+        else:
+            print("❌ Could not find used_cars.csv file anywhere")
+            raise FileNotFoundError(f"Raw data file not found: {args.raw_data}")
 
     # Reading Data
-    print("Reading data...")
-    df = pd.read_csv(args.raw_data)
+    print(f"Reading data from: {data_file_path}")
+    df = pd.read_csv(data_file_path)
     print(f"Data loaded successfully. Shape: {df.shape}")
     print(f"Columns: {list(df.columns)}")
 
