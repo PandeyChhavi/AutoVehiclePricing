@@ -20,7 +20,7 @@ inputs:
     default: 10
 outputs:
   model_output:
-    type: mlflow_model
+    type: uri_folder  # Changed from mlflow_model to uri_folder
     description: Trained MLflow model
 code: ../../../data-science/src
 command: >-

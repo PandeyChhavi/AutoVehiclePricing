@@ -5,12 +5,12 @@ description: Registers the best model from the training job
 type: command
 inputs:
   model:
-    type: mlflow_model
+    type: uri_folder  # Changed from mlflow_model to uri_folder
     description: Trained model to register
 outputs:
   registered_model:
     type: uri_folder
-    description: Registered model
+    description: Model registration info
 code: ../../../data-science/src
 command: >-
   python register.py

@@ -14,7 +14,7 @@ outputs:
     type: uri_folder
   test_data:
     type: uri_folder
-  registered_model:  # Changed from model_info_output_path
+  registered_model:
     type: uri_folder
 
 settings:
@@ -47,8 +47,7 @@ jobs:
       train_data: ${{parent.jobs.prep_data.outputs.train_data}}
       test_data: ${{parent.jobs.prep_data.outputs.test_data}}
     outputs:
-      model_output:
-        type: mlflow_model
+      model_output:  # No type specified - let sweep handle it
     sampling_algorithm: random
     trial: ./train.yml
     search_space:
@@ -68,7 +67,7 @@ jobs:
 
   register_model:
     type: command
-    component: ./register.yml  # Use the component file
+    component: ./register.yml
     inputs:
       model: ${{parent.jobs.sweep_step.outputs.model_output}}
     outputs:
