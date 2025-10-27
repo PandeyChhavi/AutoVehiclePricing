@@ -9,7 +9,7 @@ inputs:
     description: Trained model to register
 outputs:
   registered_model:
-    type: mlflow_model
+    type: uri_folder
     description: Registered model
 code: ../../../data-science/src
 command: >-
