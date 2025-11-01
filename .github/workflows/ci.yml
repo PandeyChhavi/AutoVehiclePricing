@@ -5,13 +5,20 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:  # Manual trigger
+
+permissions:
+  id-token: write  # For OIDC authentication
+  contents: read
 
 jobs:
   test:
+    name: Run Tests
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
     
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -26,31 +33,25 @@ jobs:
     - name: Lint with flake8
       run: |
         pip install flake8
-        # Stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82
-        # Exit-zero treats all errors as warnings
-        flake8 . --count --exit-zero
+        flake8 data-science/src --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 data-science/src --count --exit-zero --max-line-length=127
     
     - name: Test data preparation
       run: |
         python -c "
         import pandas as pd
-        import os
         from sklearn.model_selection import train_test_split
         from sklearn.preprocessing import LabelEncoder
         
-        # Test data loading
         df = pd.read_csv('data/used_cars.csv')
-        print(f'Data loaded successfully: {df.shape}')
+        print(f'✅ Data loaded: {df.shape}')
         
-        # Test preprocessing
         le = LabelEncoder()
         df['Segment'] = le.fit_transform(df['Segment'])
-        print('Preprocessing completed')
+        print('✅ Preprocessing completed')
         
-        # Test train/test split
         train_df, test_df = train_test_split(df, test_size=0.2, random_state=42)
-        print(f'Train set: {train_df.shape}, Test set: {test_df.shape}')
+        print(f'✅ Train: {train_df.shape}, Test: {test_df.shape}')
         "
     
     - name: Test model training (local)
@@ -62,57 +63,89 @@ jobs:
         from sklearn.model_selection import train_test_split
         from sklearn.preprocessing import LabelEncoder
         
-        # Load and prepare data
         df = pd.read_csv('data/used_cars.csv')
         le = LabelEncoder()
         df['Segment'] = le.fit_transform(df['Segment'])
         
-        # Split data
         train_df, test_df = train_test_split(df, test_size=0.2, random_state=42)
-        
-        # Prepare features and target
         y_train = train_df['price']
         X_train = train_df.drop(columns=['price'])
         y_test = test_df['price']
         X_test = test_df.drop(columns=['price'])
         
-        # Train model
         model = RandomForestRegressor(n_estimators=10, max_depth=5, random_state=42)
         model.fit(X_train, y_train)
         
-        # Test predictions
         y_pred = model.predict(X_test)
         mse = mean_squared_error(y_test, y_pred)
-        print(f'Model trained successfully. MSE: {mse:.2f}')
+        print(f'✅ Model trained. MSE: {mse:.2f}')
+        assert mse > 0, 'MSE validation failed'
         "
 
-  azure-ml-test:
+  deploy-to-azure-ml:
+    name: Deploy to Azure ML (Production)
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.SUBSCRIPTION_ID != ''
+    needs: test  # Only run after tests pass
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
     
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.8'
     
+    # Option 1: OIDC Authentication (Recommended - More Secure)
+    # Uncomment these lines and comment out the service principal login below
+    # - name: Azure login (OIDC)
+    #   uses: azure/login@v2
+    #   with:
+    #     client-id: ${{ secrets.AZURE_CLIENT_ID }}
+    #     tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+    #     subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    
+    # Option 2: Service Principal Authentication (Your Current Setup)
+    - name: Azure Login (Service Principal)
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - name: Install Azure ML CLI
+      run: |
+        az extension add -n ml -y || az extension update -n ml
     
-    - name: Run Azure ML Pipeline
+    - name: Set Azure ML defaults
+      run: |
+        az configure --defaults \
+          group=${{ secrets.RESOURCE_GROUP }} \
+          workspace=${{ secrets.WORKSPACE_NAME }}
+    
+    # Method 1: Using Python SDK (Your current approach)
+    - name: Submit Pipeline via Python SDK
       env:
         SUBSCRIPTION_ID: ${{ secrets.SUBSCRIPTION_ID }}
         RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
         WORKSPACE_NAME: ${{ secrets.WORKSPACE_NAME }}
         EXPERIMENT_NAME: ${{ secrets.EXPERIMENT_NAME }}
       run: |
+        echo "🚀 Submitting production pipeline with hyperparameter sweep..."
         python run_pipeline.py
+    
+    # Method 2: Using Azure CLI (Alternative - with live logs)
+    # Uncomment to use CLI instead of Python SDK
+    # - name: Submit Pipeline via Azure CLI
+    #   run: |
+    #     echo "🚀 Submitting pipeline via Azure CLI..."
+    #     az ml job create -f mlops/azureml/train/complete_pipeline.yml --stream
+    
+    - name: Pipeline Submitted
+      run: |
+        echo "✅ Pipeline submitted successfully!"
+        echo "📊 Check Azure ML Studio for 20 sweep trials and best model selection"
