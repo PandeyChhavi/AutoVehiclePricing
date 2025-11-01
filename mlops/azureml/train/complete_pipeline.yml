@@ -47,7 +47,7 @@ jobs:
       train_data: ${{parent.jobs.prep_data.outputs.train_data}}
       test_data: ${{parent.jobs.prep_data.outputs.test_data}}
     outputs:
-      model_output:  # No type specified - let sweep handle it
+      model_output:
     sampling_algorithm: random
     trial: ./train.yml
     search_space:
@@ -66,9 +66,16 @@ jobs:
       timeout: 7200
 
   register_model:
-    type: command
-    component: ./register.yml
+    name: register_model
+    display_name: Register Best Model
+    code: ../../../data-science/src
+    command: >-
+      python register.py 
+      --model_name used_cars_price_prediction_model
+      --model_path ${{inputs.model_path}} 
+      --model_info_output_path ${{outputs.model_info_output_path}}
+    environment: azureml:used-cars-train-env@latest
     inputs:
-      model: ${{parent.jobs.sweep_step.outputs.model_output}}
+      model_path: ${{parent.jobs.sweep_step.outputs.model_output}}
     outputs:
-      registered_model: ${{parent.outputs.registered_model}}
+      model_info_output_path: ${{parent.outputs.registered_model}}
